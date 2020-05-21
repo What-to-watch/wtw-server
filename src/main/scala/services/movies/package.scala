@@ -1,25 +1,40 @@
 package services
 
-import api.schema.MovieSchema.{Movie, MoviesConnection, MoviesQueryArgs}
-import zio.{Has, IO, ULayer, ZIO, ZLayer, console}
+import api.schema.movies.MovieSchema.{MoviesConnection, MoviesQueryArgs}
+import api.schema.movies.{MovieSchema, Schema}
+import persistence.TaskTransactor
+import zio.{Has, RIO, RLayer, Task, ULayer, ZIO, ZLayer}
 
 package object movies {
 
-  type MoviesService = Has[MoviesService.MovieService]
+  type MoviesService = Has[MoviesService.Service]
+
+  case class Movie(
+                    id: Int,
+                    title: String,
+                    releaseDate: Option[String],
+                    budget: Option[Int],
+                    posterUrl: Option[String]
+                  )
 
   object MoviesService {
-    trait MovieService {
-      def getMovie(id: Int): IO[Nothing, Movie]
-      def getMovies(queryArgs: Option[MoviesQueryArgs]): IO[Nothing, MoviesConnection]
+    trait Service {
+      def getMovie(id: Int): Task[Movie]
+      def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]]
     }
-    val test: ULayer[MoviesService] = ZLayer.fromFunction(_ => new MovieService {
-      override def getMovie(id: Int): IO[Nothing, Movie] = ???
-      override def getMovies(queryArgs: Option[MoviesQueryArgs]): IO[Nothing, MoviesConnection] = ???
+
+    val test: ULayer[MoviesService] = ZLayer.fromFunction(_ => new Service {
+      override def getMovie(id: Int): Task[Movie] = ???
+      override def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]] = ???
     })
+
+    val live: RLayer[TaskTransactor, MoviesService] =
+      ZLayer.fromService(transactor => new MoviesServiceLive(transactor))
+
   }
 
-  def getMovie(id: Int): ZIO[MoviesService, Nothing, Movie] =
-    ZIO.accessM(_.get.getMovie(id))
-  def getMovies(queryArgs: Option[MoviesQueryArgs]): ZIO[MoviesService, Nothing, MoviesConnection] =
+  def getMovie(id: Int): RIO[MoviesService, Movie] =
+    RIO.accessM(_.get.getMovie(id))
+  def getMovies(queryArgs: Option[MoviesQueryArgs]): RIO[MoviesService, List[Movie]] =
     ZIO.accessM(_.get.getMovies(queryArgs))
 }
