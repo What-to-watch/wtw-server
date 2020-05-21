@@ -12,7 +12,7 @@ import services.movies.MoviesService
 import persistence.postgres
 import zio.config.config
 import zio.config.Config
-import _root_.config.{ApiConfig, AppConfig}
+import _root_.config.{ApiConfig, AppConfig, EndpointConfig}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.putStrLn
@@ -30,12 +30,12 @@ object WtwApp extends App {
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
     val program = for {
-      config <- config[ApiConfig]
+      config <- config[EndpointConfig]
       blocker <- ZIO.access[Blocking](_.get.blockingExecutor.asEC).map(Blocker.liftExecutionContext)
       interpreter <- (GenreSchema.api |+| movieApi).interpreter
       server <- ZIO.runtime[AppEnv].flatMap { implicit rts =>
         BlazeServerBuilder[AppTask](ExecutionContext.global)
-          .bindHttp(config.endpoint.port, config.endpoint.host)
+          .bindHttp(config.port, config.host)
           .withHttpApp(
             Router[AppTask](
               "/api/graphql" -> CORS(Http4sAdapter.makeHttpService(interpreter)),
