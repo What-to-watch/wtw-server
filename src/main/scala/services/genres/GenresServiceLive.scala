@@ -23,7 +23,7 @@ object GenresServiceLive {
   object SQL {
 
     val getAll: ConnectionIO[List[Genre]] =
-      sql"SELECT * FROM genres"
+      sql"SELECT genres.id, genres.genre FROM genres"
         .query[Genre]
         .to[List]
 
