@@ -15,7 +15,7 @@ object MovieSchema {
                     posterUrl: Option[String]
                   )
   case class MovieEdge(override val node: Movie, override val cursor: String) extends Edge[Movie](node, cursor)
-  case class MoviesConnection(totalCount: Int, override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
+  case class MoviesConnection(totalCount: MovieIO[Int], override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
 
   sealed trait MoviesError extends Throwable
   case object MovieNotFound extends MoviesError

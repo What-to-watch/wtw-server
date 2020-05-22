@@ -21,11 +21,13 @@ package object movies {
     trait Service {
       def getMovie(id: Int): Task[Movie]
       def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]]
+      def getQueryCount(queryArgs: Option[MoviesQueryArgs]): Task[Int]
     }
 
     val test: ULayer[MoviesService] = ZLayer.fromFunction(_ => new Service {
       override def getMovie(id: Int): Task[Movie] = ???
       override def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]] = ???
+      override def getQueryCount(queryArgs: Option[MoviesQueryArgs]): Task[Int] = ???
     })
 
     val live: RLayer[TaskTransactor, MoviesService] =
@@ -37,4 +39,6 @@ package object movies {
     RIO.accessM(_.get.getMovie(id))
   def getMovies(queryArgs: Option[MoviesQueryArgs]): RIO[MoviesService, List[Movie]] =
     ZIO.accessM(_.get.getMovies(queryArgs))
+  def getQueryCount(queryArgs: Option[MoviesQueryArgs]): RIO[MoviesService, Int] =
+    ZIO.accessM(_.get.getQueryCount(queryArgs))
 }

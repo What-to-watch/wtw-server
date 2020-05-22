@@ -1,8 +1,5 @@
 package api.schema.movies
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
-
 import api.schema.GenreSchema.Genre
 import api.schema.PageInfo
 import api.schema.movies.MovieSchema.{Movie, MovieArgs, MovieEdge, MovieSortField, MoviesConnection, MoviesError, MoviesQueryArgs}
@@ -11,7 +8,7 @@ import caliban.{GraphQL, RootResolver}
 import caliban.schema.GenericSchema
 import services.Cursor
 import services.genres.{GenresService, getMovieGenres}
-import services.movies.{MoviesService, getMovie, getMovies}
+import services.movies.{MoviesService, getMovie, getMovies, getQueryCount}
 import zio.RIO
 
 object Schema extends GenericSchema[MoviesService with GenresService]{
@@ -47,7 +44,7 @@ object Schema extends GenericSchema[MoviesService with GenresService]{
         },
         moviesArgs => getMovies(moviesArgs).map { movies =>
           MoviesConnection(
-            9742,
+            getQueryCount(moviesArgs),
             movies.map(m => MovieEdge(node = Movie(
               m.id,
               m.title,
@@ -56,7 +53,11 @@ object Schema extends GenericSchema[MoviesService with GenresService]{
               m.budget,
               m.posterUrl
             ), cursor = getCursorFromMovie(m, moviesArgs.flatMap(_.sortField)))),
-            PageInfo(true, true, "", "")
+            PageInfo(
+              hasPreviousPage = true,
+              hasNextPage = true,
+              startCursor = movies.headOption.fold({""})(m => getCursorFromMovie(m, moviesArgs.flatMap(_.sortField))),
+              endCursor = "")
           )
         }
       )
