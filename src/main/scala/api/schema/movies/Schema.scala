@@ -9,7 +9,7 @@ import caliban.schema.GenericSchema
 import services.Cursor
 import services.genres.{GenresService, getMovieGenres}
 import services.movies.{MoviesService, getMovie, getMovies, getQueryCount}
-import zio.RIO
+import zio.{RIO, Task}
 
 object Schema extends GenericSchema[MoviesService with GenresService]{
 
@@ -48,7 +48,7 @@ object Schema extends GenericSchema[MoviesService with GenresService]{
             movies.map(m => MovieEdge(node = Movie(
               m.id,
               m.title,
-              getMovieGenres(m.id).map(_.map(genreDb => Genre(genreDb.id, genreDb.name))),
+              Task.succeed(m.genres.split("\\|").map(g => Genre(-1, g)).toList),
               m.releaseDate,
               m.budget,
               m.posterUrl

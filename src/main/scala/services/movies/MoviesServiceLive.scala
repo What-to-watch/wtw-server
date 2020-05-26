@@ -64,7 +64,7 @@ object MoviesServiceLive {
     type isForwardPagination = Boolean
 
     def getMovie(id: Int): Query0[Movie] =
-      sql"""SELECT id, title, release_date, budget, poster_url FROM movies WHERE id = $id"""
+      sql"""SELECT id, title, release_date, budget, poster_url, genres_string FROM movies WHERE id = $id"""
         .query[Movie]
 
     def getQueryCount(title: Option[String], genres: Option[List[Long]]): Query0[Int] = {
@@ -87,7 +87,7 @@ object MoviesServiceLive {
                   sortOrder: Option[MovieSortOrder], first: Option[Int], after: Option[String],
                   last: Option[Int], before: Option[String]): ConnectionIO[List[Movie]] = {
 
-      val fields = fr"SELECT movies.id, movies.title, movies.release_date, movies.budget, movies.poster_url"
+      val fields = fr"SELECT movies.id, movies.title, movies.release_date, movies.budget, movies.poster_url, movies.genres_string"
       val movies = fields ++ fr"FROM movies"
 
       val select = genres.flatMap(NonEmptyList.fromList).fold((movies, Option.empty[Fragment]))(ls =>

@@ -1,7 +1,6 @@
 package services
 
 import api.schema.movies.MovieSchema.{MoviesConnection, MoviesQueryArgs}
-import api.schema.movies.{MovieSchema, Schema}
 import persistence.TaskTransactor
 import zio.{Has, RIO, RLayer, Task, ULayer, ZIO, ZLayer}
 
@@ -14,7 +13,8 @@ package object movies {
                     title: String,
                     releaseDate: Option[String],
                     budget: Option[Int],
-                    posterUrl: Option[String]
+                    posterUrl: Option[String],
+                    genres: String
                   )
 
   object MoviesService {
