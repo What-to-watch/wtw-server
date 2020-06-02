@@ -22,12 +22,14 @@ package object movies {
       def getMovie(id: Int): Task[Movie]
       def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]]
       def getQueryCount(queryArgs: Option[MoviesQueryArgs]): Task[Int]
+      def getTopListing(n: Int, genreId: Option[Long]): Task[List[Movie]]
     }
 
     val test: ULayer[MoviesService] = ZLayer.fromFunction(_ => new Service {
       override def getMovie(id: Int): Task[Movie] = ???
       override def getMovies(queryArgs: Option[MoviesQueryArgs]): Task[List[Movie]] = ???
       override def getQueryCount(queryArgs: Option[MoviesQueryArgs]): Task[Int] = ???
+      override def getTopListing(n: Int, genreId: Option[Long]): Task[List[Movie]] = ???
     })
 
     val live: RLayer[TaskTransactor, MoviesService] =
@@ -41,4 +43,6 @@ package object movies {
     ZIO.accessM(_.get.getMovies(queryArgs))
   def getQueryCount(queryArgs: Option[MoviesQueryArgs]): RIO[MoviesService, Int] =
     ZIO.accessM(_.get.getQueryCount(queryArgs))
+  def getTopListing(n: Int, genreId: Option[Long]): RIO[MoviesService, List[Movie]] =
+    ZIO.accessM(_.get.getTopListing(n, genreId))
 }

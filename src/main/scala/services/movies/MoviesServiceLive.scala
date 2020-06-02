@@ -55,13 +55,24 @@ final class MoviesServiceLive(tnx: Transactor[Task]) extends MoviesService.Servi
         {movies => Task.succeed(movies)}
       )
   }
+
+  override def getTopListing(n: Int, genreId: Option[Long]): Task[List[Movie]] = {
+    val query = genreId.fold({
+      SQL.getTopListing(n)
+    })(genreId => SQL.getTopListingByGenre(n, genreId))
+    query
+      .transact(tnx).foldM(
+        {err => println(err);Task.fail(err)},
+        {movies => println(movies);Task.succeed(movies)}
+    )
+  }
 }
 
 object MoviesServiceLive {
 
   object SQL {
 
-    type isForwardPagination = Boolean
+    val movieFields = fr"SELECT movies.id, movies.title, movies.release_date, movies.budget, movies.poster_url, movies.genres_string"
 
     def getMovie(id: Int): Query0[Movie] =
       sql"""SELECT id, title, release_date, budget, poster_url, genres_string FROM movies WHERE id = $id"""
@@ -87,11 +98,10 @@ object MoviesServiceLive {
                   sortOrder: Option[MovieSortOrder], first: Option[Int], after: Option[String],
                   last: Option[Int], before: Option[String]): ConnectionIO[List[Movie]] = {
 
-      val fields = fr"SELECT movies.id, movies.title, movies.release_date, movies.budget, movies.poster_url, movies.genres_string"
-      val movies = fields ++ fr"FROM movies"
+      val movies = movieFields ++ fr"FROM movies"
 
       val select = genres.flatMap(NonEmptyList.fromList).fold((movies, Option.empty[Fragment]))(ls =>
-        (fields ++ fr"FROM movies, movie_genres" , Option(and(in(fr"movie_genres.genre_id", ls), fr"movies.id = movie_genres.movie_id"))))
+        (movieFields ++ fr"FROM movies, movie_genres" , Option(and(in(fr"movie_genres.genre_id", ls), fr"movies.id = movie_genres.movie_id"))))
 
       val maybeTitle = title.map(titleQuery => Fragment.const(s"movies.title LIKE '%$titleQuery%'"))
 
@@ -193,6 +203,32 @@ object MoviesServiceLive {
         case MovieSchema.ASC => if(isForward) fr">" else fr"<"
         case MovieSchema.DESC =>if(isForward) fr"<" else fr">"
       }
+    }
+
+    def getTopListing(n:Int): ConnectionIO[List[Movie]] = {
+      val join = fr"FROM movies, ratings WHERE movies.id = ratings.movie_id"
+      val groupBy = fr"GROUP BY movies.id"
+      val having = fr"HAVING COUNT(ratings.rating) >= 10"
+      val orderBy = fr"ORDER BY AVG(ratings.rating) DESC, COUNT(ratings.rating) DESC LIMIT $n"
+
+      val statement = movieFields ++ join ++ groupBy ++ having ++ orderBy
+      println(statement.toString)
+      statement.query[Movie].to[List]
+    }
+
+    def getTopListingByGenre(n:Int, genreId: Long): ConnectionIO[List[Movie]] = {
+
+      val join = fr"FROM genres INNER JOIN movie_genres ON genres.id = movie_genres.genre_id " ++
+        fr"INNER JOIN movies ON movie_genres.movie_id = movies.id " ++
+        fr"INNER JOIN ratings ON movies.id = ratings.movie_id"
+      val where = fr"WHERE genres.id = $genreId"
+      val groupBy = fr"GROUP BY movies.id"
+      val having = fr"HAVING COUNT(ratings.rating) >= 10"
+      val orderBy = fr"ORDER BY AVG(ratings.rating) DESC, COUNT(ratings.rating) DESC LIMIT $n"
+
+      val statement = movieFields ++ join ++ where ++ groupBy ++ having ++ orderBy
+      println(statement)
+      statement.query[Movie].to[List]
     }
   }
 }
