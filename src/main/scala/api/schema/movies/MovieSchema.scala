@@ -3,6 +3,7 @@ package api.schema.movies
 import api.schema.{Connection, Edge, PageInfo, PaginationArgs}
 import api.schema.GenreSchema.Genre
 import api.schema.movies.Schema.MovieIO
+import api.schema.ratings.{AverageRatingInfo, YearlyRatingInfo}
 
 object MovieSchema {
 
@@ -12,7 +13,9 @@ object MovieSchema {
                     genres: MovieIO[List[Genre]],
                     releaseDate: Option[String],
                     budget: Option[Int],
-                    posterUrl: Option[String]
+                    posterUrl: Option[String],
+                    averageRating: MovieIO[AverageRatingInfo],
+                    yearlyAverageRating: MovieIO[List[YearlyRatingInfo]]
                   )
   case class MovieEdge(override val node: Movie, override val cursor: String) extends Edge[Movie](node, cursor)
   case class MoviesConnection(totalCount: MovieIO[Int], override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
@@ -41,5 +44,7 @@ object MovieSchema {
                               override val last: Option[Int],
                               override val before: Option[String]
                             ) extends PaginationArgs
+
+  case class TopListingArgs(n:Option[Int], genreId:Option[Long])
 
 }

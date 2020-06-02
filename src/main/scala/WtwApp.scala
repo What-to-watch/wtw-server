@@ -13,6 +13,7 @@ import persistence.postgres
 import zio.config.config
 import zio.config.Config
 import _root_.config.{ApiConfig, AppConfig, EndpointConfig}
+import services.ratings.{Ratings, RatingsService}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.putStrLn
@@ -25,7 +26,7 @@ import scala.concurrent.ExecutionContext
 object WtwApp extends App {
   import org.http4s.implicits._
 
-  type AppEnv = Clock with Blocking with GenresService with MoviesService
+  type AppEnv = Clock with Blocking with GenresService with MoviesService with RatingsService
   type AppTask[A] = RIO[AppEnv, A]
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
@@ -50,7 +51,7 @@ object WtwApp extends App {
 
     val configLayer = Config.fromSystemEnv(AppConfig.descriptor, keyDelimiter = Some('.'))
 
-    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres >>> (MoviesService.live ++ GenreService.live)
+    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres >>> (MoviesService.live ++ GenreService.live ++ Ratings.live)
     program.provideSomeLayer[zio.ZEnv](configLayer.narrow(_.apiConfig) ++ persistenceLayer).foldM(
       err => putStrLn(s"Execution failed with: $err") *> IO.succeed(1),
       _ => IO.succeed(0)
