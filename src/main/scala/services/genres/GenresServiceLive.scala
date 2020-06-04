@@ -28,7 +28,7 @@ object GenresServiceLive {
         .to[List]
 
     def getGenres(movieId: Int): ConnectionIO[List[Genre]] =
-      sql"SELECT genres.id, genres.genre FROM movie_genres, genres WHERE movie_id = $movieId AND genre_id = genres.id"
+      sql"SELECT genres.id, genres.genre FROM movie_genres, genres WHERE movie_id = $movieId AND genre_id = genres.id ORDER BY genres.genre"
         .query[Genre]
         .to[List]
   }
