@@ -45,6 +45,6 @@ object MovieSchema {
                               override val before: Option[String]
                             ) extends PaginationArgs
 
-  case class TopListingArgs(n:Option[Int], genreId:Option[Long])
+  case class TopListingArgs(n:Option[Int], genre:Option[Genre])
 
 }

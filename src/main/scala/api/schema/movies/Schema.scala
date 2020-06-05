@@ -78,7 +78,8 @@ object Schema extends GenericSchema[MoviesService with GenresService with Rating
 
   def TopListing(listingArgs: TopListingArgs): MovieIO[List[Movie]] = {
     val n = listingArgs.n.fold({100})(identity)
-    getTopListing(n, listingArgs.genreId)
+    val genreId = listingArgs.genre.map(_.id)
+    getTopListing(n, genreId)
       .map(movies =>
         movies.map(m => Movie(
           m.id,
