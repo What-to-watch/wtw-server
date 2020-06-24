@@ -1,6 +1,6 @@
-import api.schema.GenreSchema
-import api.schema.movies.Schema.{api => movieApi}
+import api.schema.WtWApi
 import caliban.Http4sAdapter
+import caliban.Http4sAdapter.provideSomeLayerFromRequest
 import cats.data.Kleisli
 import cats.effect.{Blocker, ExitCode}
 import org.http4s.StaticFile
@@ -12,8 +12,11 @@ import services.movies.MoviesService
 import persistence.postgres
 import zio.config.config
 import zio.config.Config
-import _root_.config.{ApiConfig, AppConfig, EndpointConfig}
+import _root_.config.{AppConfig, EndpointConfig}
+import services.auth.Auth
 import services.ratings.{Ratings, RatingsService}
+import services.users.{Users, UsersService}
+import utils.AuthUtils
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.putStrLn
@@ -26,20 +29,28 @@ import scala.concurrent.ExecutionContext
 object WtwApp extends App {
   import org.http4s.implicits._
 
-  type AppEnv = Clock with Blocking with GenresService with MoviesService with RatingsService
+  type AppEnv = Clock with Blocking with GenresService with MoviesService with RatingsService with UsersService
   type AppTask[A] = RIO[AppEnv, A]
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
+
+    val configLayer = Config.fromSystemEnv(AppConfig.descriptor, keyDelimiter = Some('.'))
+
     val program = for {
       config <- config[EndpointConfig]
       blocker <- ZIO.access[Blocking](_.get.blockingExecutor.asEC).map(Blocker.liftExecutionContext)
-      interpreter <- (GenreSchema.api |+| movieApi).interpreter
+      interpreter <- WtWApi.interpreter
       server <- ZIO.runtime[AppEnv].flatMap { implicit rts =>
         BlazeServerBuilder[AppTask](ExecutionContext.global)
           .bindHttp(config.port, config.host)
           .withHttpApp(
             Router[AppTask](
-              "/api/graphql" -> CORS(Http4sAdapter.makeHttpService(interpreter)),
+              "/api/graphql" -> {
+                val graphqlService = provideSomeLayerFromRequest[AppEnv, Auth](Http4sAdapter.makeHttpService(interpreter), { req =>
+                  configLayer.narrow(_.authConfig) >>> Auth.live(AuthUtils.extractCredentialsFromHeaders(req.headers))
+                })
+                CORS(graphqlService)
+              },
               "/graphiql" -> Kleisli.liftF(StaticFile.fromResource("/graphql-playground.html", blocker, None))
             ).orNotFound
           )
@@ -49,9 +60,7 @@ object WtwApp extends App {
       }
     } yield server
 
-    val configLayer = Config.fromSystemEnv(AppConfig.descriptor, keyDelimiter = Some('.'))
-
-    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres >>> (MoviesService.live ++ GenreService.live ++ Ratings.live)
+    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres >>> (MoviesService.live ++ GenreService.live ++ Ratings.live ++ Users.live)
     program.provideSomeLayer[zio.ZEnv](configLayer.narrow(_.apiConfig) ++ persistenceLayer).foldM(
       err => putStrLn(s"Execution failed with: $err") *> IO.succeed(1),
       _ => IO.succeed(0)

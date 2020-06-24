@@ -1,6 +1,6 @@
 package api.schema.movies
 
-import api.schema.{Connection, Edge, PageInfo, PaginationArgs}
+import api.schema.{Connection, Edge, GraphqlEncodableError, PageInfo, PaginationArgs}
 import api.schema.GenreSchema.Genre
 import api.schema.movies.Schema.MovieIO
 import api.schema.ratings.{AverageRatingInfo, YearlyRatingInfo}
@@ -20,8 +20,10 @@ object MovieSchema {
   case class MovieEdge(override val node: Movie, override val cursor: String) extends Edge[Movie](node, cursor)
   case class MoviesConnection(totalCount: MovieIO[Int], override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
 
-  sealed trait MoviesError extends Throwable
-  case object MovieNotFound extends MoviesError
+  sealed trait MoviesError extends GraphqlEncodableError
+  case object MovieNotFound extends MoviesError {
+    override def errorCode: String = "MOVIE-NOT-FOUND"
+  }
 
   case class MovieArgs(id: Int)
 
