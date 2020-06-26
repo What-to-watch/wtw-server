@@ -5,15 +5,23 @@ import api.schema.movies.MovieSchema.{MovieNotFound, MovieSortField, MovieSortOr
 import cats.data.NonEmptyList
 import doobie.free.connection.ConnectionIO
 import doobie.util.transactor.Transactor
-import zio.Task
+import zio.{Task, ZIO}
 import zio.interop.catz._
 import doobie.implicits._
 import doobie.util.fragment.Fragment
 import doobie.util.query.Query0
-import doobie.util.fragments.{in, whereAndOpt, parentheses, and}
+import doobie.util.fragments.{and, in, parentheses, whereAndOpt}
+import org.http4s.client.Client
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.implicits._
+import io.circe.generic.auto._
+import org.http4s.Uri
 import services.Cursor
+import services.ratings.RatingsServiceLive
 
-final class MoviesServiceLive(tnx: Transactor[Task]) extends MoviesService.Service {
+final case class MoviesServiceLive(tnx: Transactor[Task], mlModelUrl: String, httpClient: Client[Task]) extends MoviesService.Service {
+
+  private val mlApiUri = ZIO.fromTry(Uri.fromString(mlModelUrl).toTry)
 
   import MoviesServiceLive._
 
@@ -66,6 +74,17 @@ final class MoviesServiceLive(tnx: Transactor[Task]) extends MoviesService.Servi
         {movies => println(movies);Task.succeed(movies)}
     )
   }
+
+  override def getTopRecommendedListing(n: Int, userId: Int): Task[Option[List[RecommendedMovie]]] = for {
+    count <- RatingsServiceLive.SQL.getUserRatingCount(userId).unique.transact(tnx)
+    listing <- if (count >= 5) getUserListing(n, userId) else Task.succeed(List())
+  } yield Option.when(listing.nonEmpty)(listing)
+
+  private def getUserListing(n: Int, userId: Int): Task[List[RecommendedMovie]] = for {
+    uri <- mlApiUri
+    recommendations <- httpClient.expect[MovieRecommendations](uri.withPath(s"/topN/$userId?n=$n")).mapError({ err => println(err);err })
+    movies <- Task.foreach(recommendations.movies)(movie => SQL.getMovie(movie.movie_id).unique.transact(tnx).map(m => RecommendedMovie(m,Some(movie.prediction))))
+  } yield movies
 }
 
 object MoviesServiceLive {

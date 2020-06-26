@@ -5,13 +5,19 @@ import api.schema.ratings.{AverageRatingInfo, YearlyRatingInfo}
 import doobie.free.connection.ConnectionIO
 import doobie.util.query.Query0
 import doobie.implicits._
+import doobie.implicits.javasql._
+import doobie.postgres._
+import doobie.postgres.implicits._
 import doobie.util.transactor.Transactor
-import zio.Task
+import org.http4s.{Status, Uri}
+import org.http4s.client.Client
+import zio.{Task, ZIO}
 import zio.interop.catz._
 
-final class RatingsServiceLive(tnx: Transactor[Task]) extends Ratings.Service {
-
+final case class RatingsServiceLive(tnx: Transactor[Task], mlModelUrl: String, httpClient: Client[Task]) extends Ratings.Service {
   import RatingsServiceLive._
+
+  private val mlApiUri = ZIO.fromTry(Uri.fromString(mlModelUrl).toTry)
 
   override def getAverageForMovie(movieId: Int): Task[AverageRatingInfo] = SQL
     .getAvgRating(movieId)
@@ -27,6 +33,20 @@ final class RatingsServiceLive(tnx: Transactor[Task]) extends Ratings.Service {
       { err => println(err); Task.fail(err) },
       { movies => Task.succeed(movies) }
     )
+
+  override def postRating(rating: Rating): Task[Rating] = for {
+    createdRating <- SQL.postRating(rating).transact(tnx).mapError({ err => println(err);err })
+    count <- SQL.getUserRatingCount(rating.userId).unique.transact(tnx)
+    _ <- if(count > 0 && count % 5 == 0) update_model() else Task.succeed(Status.Ok)
+  } yield createdRating
+
+  private def update_model(): Task[Status] = for {
+    uri <- mlApiUri
+    status <- httpClient.statusFromUri(uri.withPath("/train"))
+  } yield status
+
+  override def getMovieRatingFromUser(movieId: Int, userId: Int): Task[Option[Double]] =
+    SQL.getRating(movieId, userId).transact(tnx).map(_.map(r => r.rating)).mapError({ err => println(err);err})
 }
 
 object RatingsServiceLive {
@@ -45,6 +65,16 @@ object RatingsServiceLive {
         .query[YearlyRatingInfo]
         .to[List]
     }
-  }
 
+    def getRating(movieId: Int, userId: Int): doobie.ConnectionIO[Option[Rating]] =
+      sql"SELECT * FROM ratings WHERE user_id = $userId AND movie_id = $movieId".query[Rating].option
+
+    def postRating(rating: Rating): ConnectionIO[Rating] =
+      sql"INSERT INTO ratings (user_id, movie_id, rating, timestamp) VALUES (${rating.userId}, ${rating.movieId}, ${rating.rating}, ${rating.timestamp})"
+        .update
+        .withUniqueGeneratedKeys("user_id", "movie_id", "rating", "timestamp")
+
+    def getUserRatingCount(userId: Int): Query0[Int] = sql"SELECT COUNT(*) FROM ratings WHERE user_id = $userId".query[Int]
+
+  }
 }

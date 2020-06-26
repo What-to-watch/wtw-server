@@ -15,7 +15,9 @@ object MovieSchema {
                     budget: Option[Int],
                     posterUrl: Option[String],
                     averageRating: MovieIO[AverageRatingInfo],
-                    yearlyAverageRating: MovieIO[List[YearlyRatingInfo]]
+                    yearlyAverageRating: MovieIO[List[YearlyRatingInfo]],
+                    myRating: Option[Double] = None,
+                    expectedRating: Option[Double] = None
                   )
   case class MovieEdge(override val node: Movie, override val cursor: String) extends Edge[Movie](node, cursor)
   case class MoviesConnection(totalCount: MovieIO[Int], override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
@@ -48,5 +50,5 @@ object MovieSchema {
                             ) extends PaginationArgs
 
   case class TopListingArgs(n:Option[Int], genreId:Option[Long])
-
+  case class TopRecommendedListingArgs(n:Option[Int])
 }

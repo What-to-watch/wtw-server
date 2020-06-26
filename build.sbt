@@ -15,6 +15,11 @@ libraryDependencies += "dev.zio" %% "zio-config" % "1.0.0-RC17"
 libraryDependencies += "com.github.ghostdogpr" %% "caliban" % calibanVersion
 libraryDependencies += "com.github.ghostdogpr" %% "caliban-http4s"     % calibanVersion // routes for http4s
 
+val http4sVersion = "0.21.4"
+libraryDependencies += "org.http4s" %% "http4s-blaze-client" % http4sVersion
+libraryDependencies += "org.http4s" %% "http4s-circe" % http4sVersion
+libraryDependencies += "io.circe" %% "circe-generic" % "0.12.3"
+
 lazy val doobieVersion = "0.9.0"
 libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-core"     % doobieVersion,

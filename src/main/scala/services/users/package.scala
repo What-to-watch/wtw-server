@@ -1,5 +1,6 @@
 package services
 
+import api.schema.GraphqlEncodableError
 import api.schema.user.UserRegistrationArgs
 import persistence.TaskTransactor
 import zio.{Has, RIO, RLayer, Task, ZIO, ZLayer}
@@ -13,9 +14,16 @@ package object users {
     def toUser: User = User(id, username, email)
   }
 
-  sealed trait UserError extends Throwable
-  case object RegisterError extends UserError
-  case object LoginError extends UserError
+  sealed trait UserError extends GraphqlEncodableError
+  case object RegisterError extends UserError {
+    override def errorCode: String = "REGISTER-ERROR"
+  }
+  case object LoginError extends UserError {
+    override def errorCode: String = "LOGIN-ERROR"
+  }
+  case object UnauthorizedError extends UserError {
+    override def errorCode: String = "UNAUTHORIZED-ERROR"
+  }
 
   object Users {
     trait Service {
