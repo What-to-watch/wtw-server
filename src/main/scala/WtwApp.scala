@@ -16,7 +16,7 @@ import _root_.config.{AppConfig, EndpointConfig}
 import services.auth.Auth
 import services.ratings.{Ratings, RatingsService}
 import services.users.{Users, UsersService}
-import utils.AuthUtils
+import utils.{AuthUtils, HttpClient}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.putStrLn
@@ -60,8 +60,9 @@ object WtwApp extends App {
       }
     } yield server
 
-    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres >>> (MoviesService.live ++ GenreService.live ++ Ratings.live ++ Users.live)
-    program.provideSomeLayer[zio.ZEnv](configLayer.narrow(_.apiConfig) ++ persistenceLayer).foldM(
+    val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres
+    val servicesLayer = (persistenceLayer ++ configLayer.narrow(_.mlApiConfig) ++ HttpClient.clientLive) >>> (MoviesService.live ++ GenreService.live ++ Ratings.live ++ Users.live)
+    program.provideSomeLayer[zio.ZEnv](configLayer.narrow(_.apiConfig) ++ servicesLayer).foldM(
       err => putStrLn(s"Execution failed with: $err") *> IO.succeed(1),
       _ => IO.succeed(0)
     )
