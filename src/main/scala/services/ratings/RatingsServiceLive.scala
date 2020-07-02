@@ -70,7 +70,9 @@ object RatingsServiceLive {
       sql"SELECT * FROM ratings WHERE user_id = $userId AND movie_id = $movieId".query[Rating].option
 
     def postRating(rating: Rating): ConnectionIO[Rating] =
-      sql"INSERT INTO ratings (user_id, movie_id, rating, timestamp) VALUES (${rating.userId}, ${rating.movieId}, ${rating.rating}, ${rating.timestamp})"
+      sql"""INSERT INTO ratings (user_id, movie_id, rating, timestamp)
+           VALUES (${rating.userId}, ${rating.movieId}, ${rating.rating}, ${rating.timestamp})
+           ON CONFLICT (user_id, movie_id) DO UPDATE SET rating = EXCLUDED.rating, timestamp = EXCLUDED.timestamp"""
         .update
         .withUniqueGeneratedKeys("user_id", "movie_id", "rating", "timestamp")
 
