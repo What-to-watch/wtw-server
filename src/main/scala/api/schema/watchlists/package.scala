@@ -20,6 +20,7 @@ package object watchlists {
                       id: Int,
                       name: String,
                       icon: Option[String],
+                      isPublic: Boolean,
                       movies: WatchlistIO[List[Movie]]
                       )
 
@@ -51,6 +52,7 @@ package object watchlists {
       watchlist.id,
       watchlist.name,
       watchlist.icon,
+      watchlist.isPublic,
       ZIO.foreach(watchlist.movie_ids)(movieId => getMovie(movieId).flatMap(Movie.fromServiceMovie(_, userIdOpt)))
     )
 
@@ -65,6 +67,7 @@ package object watchlists {
       watchlist.id,
       watchlist.name,
       watchlist.icon,
+      watchlist.isPublic,
       ZIO.foreach(watchlist.movie_ids)(movieId => getMovie(movieId).flatMap(Movie.fromServiceMovie(_, userIdOpt)))
     ))
 
@@ -75,6 +78,7 @@ package object watchlists {
       watchlist.id,
       watchlist.name,
       watchlist.icon,
+      watchlist.isPublic,
       ZIO.foreach(watchlist.movie_ids)(movieId => getMovie(movieId).flatMap(Movie.fromServiceMovie(_, userIdOpt)))
     ))
 
@@ -89,6 +93,7 @@ package object watchlists {
       watchlist.id,
       watchlist.name,
       watchlist.icon,
+      watchlist.isPublic,
       Task.succeed(List())
     )
 
