@@ -16,6 +16,7 @@ import _root_.config.{AppConfig, EndpointConfig}
 import services.auth.Auth
 import services.ratings.{Ratings, RatingsService}
 import services.users.{Users, UsersService}
+import services.watchlists.{WatchlistService, Watchlists}
 import utils.{AuthUtils, HttpClient}
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -29,7 +30,7 @@ import scala.concurrent.ExecutionContext
 object WtwApp extends App {
   import org.http4s.implicits._
 
-  type AppEnv = Clock with Blocking with GenresService with MoviesService with RatingsService with UsersService
+  type AppEnv = Clock with Blocking with GenresService with MoviesService with RatingsService with UsersService with WatchlistService
   type AppTask[A] = RIO[AppEnv, A]
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
@@ -61,7 +62,8 @@ object WtwApp extends App {
     } yield server
 
     val persistenceLayer = configLayer.narrow(_.postgresConfig) >>> postgres
-    val servicesLayer = (persistenceLayer ++ configLayer.narrow(_.mlApiConfig) ++ HttpClient.clientLive) >>> (MoviesService.live ++ GenreService.live ++ Ratings.live ++ Users.live)
+    val servicesLayer = (persistenceLayer ++ configLayer.narrow(_.mlApiConfig) ++ HttpClient.clientLive) >>>
+      (MoviesService.live ++ GenreService.live ++ Ratings.live ++ Users.live ++ Watchlists.live)
     program.provideSomeLayer[zio.ZEnv](configLayer.narrow(_.apiConfig) ++ servicesLayer).foldM(
       err => putStrLn(s"Execution failed with: $err") *> IO.succeed(1),
       _ => IO.succeed(0)

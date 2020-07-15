@@ -18,6 +18,9 @@ package object auth {
   case object ExpiredJwt extends AuthError {
     override def errorCode: String = "EXPIRED-JWT"
   }
+  case object Unauthorized extends AuthError {
+    override def errorCode: String = "UNAUTHORIZED"
+  }
 
   type Auth = Has[Auth.Service]
 

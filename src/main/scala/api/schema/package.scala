@@ -2,6 +2,7 @@ package api
 
 import api.schema.movies.Schema
 import api.schema.user.UserSchema
+import api.schema.watchlists.WatchlistSchema
 import caliban.CalibanError.{ExecutionError, ParsingError, ValidationError}
 import caliban.ResponseValue.ObjectValue
 import caliban.Value.StringValue
@@ -11,6 +12,7 @@ import services.genres.GenresService
 import services.movies.MoviesService
 import services.ratings.RatingsService
 import services.users.UsersService
+import services.watchlists.WatchlistService
 import zio.IO
 
 package object schema {
@@ -19,11 +21,11 @@ package object schema {
     def errorCode: String
   }
 
-  type SchemaEnv = MoviesService with GenresService with RatingsService with Auth with UsersService
+  type SchemaEnv = MoviesService with GenresService with RatingsService with Auth with UsersService with WatchlistService
 
   object WtWApi {
     val schema: GraphQL[SchemaEnv] =
-      UserSchema.api |+| GenreSchema.api |+| Schema.api
+      UserSchema.api |+| GenreSchema.api |+| Schema.api |+| WatchlistSchema.api
 
     val interpreter: IO[ValidationError, GraphQLInterpreter[SchemaEnv, CalibanError]] = for {
       interpreter <- schema.interpreter

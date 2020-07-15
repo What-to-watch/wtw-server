@@ -4,6 +4,10 @@ import api.schema.{Connection, Edge, GraphqlEncodableError, PageInfo, Pagination
 import api.schema.GenreSchema.Genre
 import api.schema.movies.Schema.MovieIO
 import api.schema.ratings.{AverageRatingInfo, YearlyRatingInfo}
+import services.genres.{GenresService, getMovieGenres}
+import services.movies.{Movie => ServiceMovie}
+import services.ratings.{RatingsService, getAverageForMovie, getRating, getYearlyAverageForMovie}
+import zio.{RIO, ZIO}
 
 object MovieSchema {
 
@@ -19,6 +23,24 @@ object MovieSchema {
                     myRating: Option[Double] = None,
                     expectedRating: Option[Double] = None
                   )
+  object Movie {
+    def fromServiceMovie(movie: ServiceMovie, userIdOpt: Option[Int]): RIO[RatingsService with GenresService, Movie] = for {
+      rating <- userIdOpt match {
+        case Some(userId) =>  getRating(movie.id, userId)
+        case None => ZIO.succeed(Option.empty)
+      }
+    } yield Movie(
+      movie.id,
+      movie.title,
+      getMovieGenres(movie.id).map(_.map(genreDb => Genre(genreDb.id, genreDb.name))),
+      movie.releaseDate,
+      movie.budget,
+      movie.posterUrl,
+      getAverageForMovie(movie.id),
+      getYearlyAverageForMovie(movie.id),
+      rating
+    )
+  }
   case class MovieEdge(override val node: Movie, override val cursor: String) extends Edge[Movie](node, cursor)
   case class MoviesConnection(totalCount: MovieIO[Int], override val edges: List[MovieEdge], override val pageInfo: PageInfo) extends Connection[Movie](edges, pageInfo)
 
