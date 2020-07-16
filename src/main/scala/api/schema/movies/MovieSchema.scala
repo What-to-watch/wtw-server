@@ -14,6 +14,7 @@ object MovieSchema {
   case class Movie(
                     id: Int,
                     title: String,
+                    overview: Option[String],
                     genres: MovieIO[List[Genre]],
                     releaseDate: Option[String],
                     budget: Option[Int],
@@ -32,6 +33,7 @@ object MovieSchema {
     } yield Movie(
       movie.id,
       movie.title,
+      movie.overview,
       getMovieGenres(movie.id).map(_.map(genreDb => Genre(genreDb.id, genreDb.name))),
       movie.releaseDate,
       movie.budget,

@@ -91,10 +91,10 @@ object MoviesServiceLive {
 
   object SQL {
 
-    val movieFields = fr"SELECT movies.id, movies.title, movies.release_date, movies.budget, movies.poster_url, movies.genres_string"
+    val movieFields = fr"SELECT movies.id, movies.title, movies.overview, movies.release_date, movies.budget, movies.poster_url, movies.genres_string"
 
     def getMovie(id: Int): Query0[Movie] =
-      sql"""SELECT id, title, release_date, budget, poster_url, genres_string FROM movies WHERE id = $id"""
+      sql"""SELECT id, title, overview, release_date, budget, poster_url, genres_string FROM movies WHERE id = $id"""
         .query[Movie]
 
     def getQueryCount(title: Option[String], genres: Option[List[Long]]): Query0[Int] = {
