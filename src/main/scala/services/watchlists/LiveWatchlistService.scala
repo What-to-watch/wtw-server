@@ -92,6 +92,18 @@ final case class LiveWatchlistService(tnx: Transactor[Task]) extends Watchlists.
     _ <- if (dbWatchlist.userId != userId) Task.fail(ForbiddenWatchlistModification) else Task.unit
     _ <- SQL.addMovieToWatchlist(watchlistId, movieId).run.transact(tnx)
   } yield ()
+
+  override def deleteWatchlist(id: Int, userId: Int): Task[Unit] = for {
+    dbWatchlist <- SQL.getWatchlist(id).unique.transact(tnx)
+    _ <- if (dbWatchlist.userId != userId) Task.fail(ForbiddenWatchlistModification) else Task.unit
+    _ <- SQL.deleteWatchlist(id).run.transact(tnx).mapError{ err => println(err);err }
+  } yield ()
+
+  override def deleteMovieInWatchlist(watchlistId: Int, userId: Int, movieId: Int): Task[Unit] = for {
+    dbWatchlist <- SQL.getWatchlist(watchlistId).unique.transact(tnx)
+    _ <- if (dbWatchlist.userId != userId) Task.fail(ForbiddenWatchlistModification) else Task.unit
+    _ <- SQL.deleteMovieInWatchlist(watchlistId, movieId).run.transact(tnx).mapError{ err => println(err);err }
+  } yield ()
 }
 
 object LiveWatchlistService {
@@ -100,6 +112,9 @@ object LiveWatchlistService {
       sql"INSERT INTO watchlists(name, icon, user_id, is_public) VALUES (${watchlist.name}, ${watchlist.icon}, ${watchlist.userId}, ${watchlist.isPublic})"
       .update
       .withUniqueGeneratedKeys("watchlist_id", "name", "icon", "user_id", "is_public")
+
+    def deleteWatchlist(id: Int): Update0 =
+      sql"DELETE FROM watchlists WHERE watchlist_id = $id".update
 
     def getWatchlist(id: Int): Query0[WatchlistDB] =
       sql"SELECT watchlist_id, name, icon, user_id, is_public FROM watchlists WHERE watchlist_id = $id".query
@@ -123,5 +138,8 @@ object LiveWatchlistService {
       sql"""INSERT INTO watchlists_movies(watchlist_id, movie_id) VALUES ($watchlistId, $movieId)
             ON CONFLICT(watchlist_id, movie_id) DO NOTHING
            """.update
+
+    def deleteMovieInWatchlist(watchlistId: Int, movieId: Int): Update0 =
+      sql"DELETE FROM watchlists_movies WHERE watchlist_id = $watchlistId AND movie_id = $movieId".update
   }
 }
