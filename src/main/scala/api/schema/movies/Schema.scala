@@ -48,6 +48,7 @@ object Schema extends GenericSchema[Auth with MoviesService with GenresService w
             movies.map(m => MovieEdge(node = Movie(
               m.id,
               m.title,
+              m.overview,
               Task.succeed(m.genres.split("\\|").map(g => Genre(-1, g)).toList),
               m.releaseDate,
               m.budget,
@@ -83,6 +84,7 @@ object Schema extends GenericSchema[Auth with MoviesService with GenresService w
   } yield Movie(
       movieDB.id,
       movieDB.title,
+      movieDB.overview,
       getMovieGenres(movieArgs.id).map(_.map(genreDb => Genre(genreDb.id, genreDb.name))),
       movieDB.releaseDate,
       movieDB.budget,
@@ -99,6 +101,7 @@ object Schema extends GenericSchema[Auth with MoviesService with GenresService w
         movies.map(m => Movie(
           m.id,
           m.title,
+          m.overview,
           Task.succeed(m.genres.split("\\|").map(g => Genre(-1, g)).toList),
           m.releaseDate,
           m.budget,
@@ -120,6 +123,7 @@ object Schema extends GenericSchema[Auth with MoviesService with GenresService w
     movies.map(m => Movie(
       m.id,
       m.title,
+      m.overview,
       Task.succeed(m.genres.split("\\|").map(g => Genre(-1, g)).toList),
       m.releaseDate,
       m.budget,

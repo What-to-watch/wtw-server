@@ -15,6 +15,7 @@ package object movies {
   case class Movie(
                     id: Int,
                     title: String,
+                    overview: Option[String],
                     releaseDate: Option[String],
                     budget: Option[Int],
                     posterUrl: Option[String],
@@ -23,6 +24,7 @@ package object movies {
   case class RecommendedMovie(
                                id: Int,
                                title: String,
+                               overview: Option[String],
                                releaseDate: Option[String],
                                budget: Option[Int],
                                posterUrl: Option[String],
@@ -33,6 +35,7 @@ package object movies {
     def apply(movie: Movie, recommendedRating: Option[Double]): RecommendedMovie = RecommendedMovie(
       movie.id,
       movie.title,
+      movie.overview,
       movie.releaseDate,
       movie.budget,
       movie.posterUrl,
