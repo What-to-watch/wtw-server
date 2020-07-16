@@ -35,9 +35,11 @@ package object watchlists {
     trait Service {
       def createWatchlist(watchlist: Watchlist): Task[Watchlist]
       def getWatchlist(id: Int): Task[Watchlist]
+      def deleteWatchlist(id:Int, userId:Int): Task[Unit]
       def getPublicWatchlists: Task[List[Watchlist]]
       def getUserWatchlists(userId: Int): Task[List[Watchlist]]
       def addMovieToWatchlist(watchlistId: Int, userId: Int, movieId: Int): Task[Unit]
+      def deleteMovieInWatchlist(watchlistId: Int, userId: Int, movieId: Int): Task[Unit]
     }
 
     val live: RLayer[TaskTransactor, WatchlistService] = ZLayer.fromService(tnx => LiveWatchlistService(tnx))
@@ -49,6 +51,8 @@ package object watchlists {
         override def getUserWatchlists(userId: Int): Task[List[Watchlist]] = ???
         override def addMovieToWatchlist(watchlistId: Int, userId: Int, movieId: Int): Task[Unit] = ???
         override def getPublicWatchlists: Task[List[Watchlist]] = ???
+        override def deleteWatchlist(id: Int, userId: Int): Task[Unit] = ???
+        override def deleteMovieInWatchlist(watchlistId: Int, userId: Int, movieId: Int): Task[Unit] = ???
       }
     }
   }
@@ -57,10 +61,14 @@ package object watchlists {
     RIO.accessM(_.get.createWatchlist(watchlist))
   def getWatchlist(id: Int): RIO[WatchlistService, Watchlist] =
     RIO.accessM(_.get.getWatchlist(id))
+  def deleteWatchlist(id:Int, userId:Int): RIO[WatchlistService, Unit] =
+    RIO.accessM(_.get.deleteWatchlist(id, userId))
   def getPublicWatchlists: RIO[WatchlistService, List[Watchlist]] =
     RIO.accessM(_.get.getPublicWatchlists)
   def getUserWatchlists(userId: Int): RIO[WatchlistService, List[Watchlist]] =
     RIO.accessM(_.get.getUserWatchlists(userId))
   def addMovieToWatchlist(watchlistId: Int, userId: Int, movieId: Int): RIO[WatchlistService, Unit] =
     RIO.accessM(_.get.addMovieToWatchlist(watchlistId, userId, movieId))
+  def deleteMovieInWatchlist(watchlistId: Int, userId: Int, movieId: Int): RIO[WatchlistService, Unit] =
+    RIO.accessM(_.get.deleteMovieInWatchlist(watchlistId, userId, movieId))
 }

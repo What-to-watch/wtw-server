@@ -1,7 +1,6 @@
 package api.schema
 
 import api.schema.movies.MovieSchema.Movie
-import api.schema.watchlists.WatchlistIO
 import caliban.GraphQL.graphQL
 import caliban.schema.GenericSchema
 import caliban.{GraphQL, RootResolver}
@@ -9,7 +8,9 @@ import services.auth.{Auth, Unauthorized, getUserId}
 import services.genres.GenresService
 import services.movies.{MoviesService, getMovie}
 import services.ratings.RatingsService
-import services.watchlists.{WatchlistService, addMovieToWatchlist, createWatchlist, getPublicWatchlists, getUserWatchlists, getWatchlist, Watchlist => ServiceWatchlist}
+import services.watchlists.{WatchlistService, addMovieToWatchlist, createWatchlist,
+  getPublicWatchlists, getUserWatchlists, getWatchlist,
+  deleteWatchlist, deleteMovieInWatchlist, Watchlist => ServiceWatchlist}
 import zio.{RIO, Task, ZIO}
 
 package object watchlists {
@@ -26,7 +27,9 @@ package object watchlists {
 
   case class GetWatchlistArgs(id: Int)
   case class CreateWatchlistArgs(name: String, icon: Option[String], isPublic: Boolean)
+  case class DeleteWatchlistArgs(id: Int)
   case class AddMovieToWatchlistArgs(watchlistId: Int, movieId: Int)
+  case class DeleteMovieInWatchlistArgs(watchlistId: Int, movieId: Int)
 
   object WatchlistSchema extends GenericSchema[Auth with WatchlistService with MoviesService with GenresService with RatingsService]{
     case class Query(
@@ -36,13 +39,15 @@ package object watchlists {
                     )
 
     case class Mutation(
-                       createWatchlist: CreateWatchlistArgs => WatchlistIO[Watchlist],
-                       addMovieToWatchlist: AddMovieToWatchlistArgs => WatchlistIO[Unit]
+                         createWatchlist: CreateWatchlistArgs => WatchlistIO[Watchlist],
+                         deleteWatchlist: DeleteWatchlistArgs => WatchlistIO[Unit],
+                         addMovieToWatchlist: AddMovieToWatchlistArgs => WatchlistIO[Unit],
+                         deleteMovieInWatchlist: DeleteMovieInWatchlistArgs => WatchlistIO[Unit]
                        )
 
     val api: GraphQL[Auth with WatchlistService with MoviesService with GenresService with RatingsService] = graphQL(RootResolver(
       Query(GetWatchlist, GetMyWatchlists(), GetPublicWatchlists()),
-      Mutation(CreateWatchlist, AddMovieToWatchlist)
+      Mutation(CreateWatchlist, DeleteWatchlist, AddMovieToWatchlist, DeleteMovieInWatchlist)
     ))
 
     def GetWatchlist(args: GetWatchlistArgs): WatchlistIO[Watchlist] = for {
@@ -97,6 +102,15 @@ package object watchlists {
       Task.succeed(List())
     )
 
+    def DeleteWatchlist(args: DeleteWatchlistArgs): WatchlistIO[Unit] = for {
+      userIdOpt <- getUserId
+      id <- userIdOpt match {
+        case Some(id) => Task.succeed(id)
+        case None => Task.fail(Unauthorized)
+      }
+      _ <- deleteWatchlist(args.id, id)
+    } yield ()
+
     def AddMovieToWatchlist(args: AddMovieToWatchlistArgs): WatchlistIO[Unit] = for {
       userIdOpt <- getUserId
       id <- userIdOpt match {
@@ -104,6 +118,15 @@ package object watchlists {
         case None => Task.fail(Unauthorized)
       }
       _ <- addMovieToWatchlist(args.watchlistId, id, args.movieId)
+    } yield ()
+
+    def DeleteMovieInWatchlist(args: DeleteMovieInWatchlistArgs): WatchlistIO[Unit] = for {
+      userIdOpt <- getUserId
+      id <- userIdOpt match {
+        case Some(id) => Task.succeed(id)
+        case None => Task.fail(Unauthorized)
+      }
+      _ <- deleteMovieInWatchlist(args.watchlistId, id, args.movieId)
     } yield ()
   }
 }
